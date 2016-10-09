@@ -90,8 +90,8 @@ class Ui_MainWindow(object):
 
 
         self.dialog = QtGui.QFileDialog()
-        self.dialog.setModal(True)###############modal is on. Without it, main window is active while filedialog is showing up
-        self.dialog.setDirectory(os.path.expanduser('~'))########Initial directory is home not current directory.
+        self.dialog.setModal(True)#
+        self.dialog.setDirectory(os.path.expanduser('~'))#
         filters = ["csv comma-separated values(*.csv)", "text file(*.txt)", "tab tab-separated values(*.tsv)", "wav file(*.wav)", "All(*)"]#     file extention.
         self.dialog.setNameFilters(filters)
         QtCore.QObject.connect(self.dialog, QtCore.SIGNAL("accepted()"), self.load)
@@ -106,7 +106,7 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.doubleSpinBox_high, QtCore.SIGNAL("editingFinished()"), self.cutoff)
         QtCore.QObject.connect(self.doubleSpinBox_low, QtCore.SIGNAL("editingFinished()"), self.cutoff)
         QtCore.QObject.connect(self.spinBox_tap, QtCore.SIGNAL("editingFinished()"), self.tap)
-        QtCore.QObject.connect(self.actionShow, QtCore.SIGNAL("triggered()"), self.License)###########################################
+        QtCore.QObject.connect(self.actionShow, QtCore.SIGNAL("triggered()"), self.License)#
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
         self.spinBox_tap.setProperty("value", 101)#
@@ -283,7 +283,7 @@ class Ui_MainWindow(object):
 
 
 class ControlMainWindow(QtGui.QMainWindow):
-    def __init__(self, parent=None):#constructer. it is function. this function is called when the class was
+    def __init__(self, parent=None):
         super(ControlMainWindow, self).__init__(parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
