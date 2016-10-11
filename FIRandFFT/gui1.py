@@ -227,15 +227,15 @@ class Ui_MainWindow(object):
 
     def plotOriginal(self):
         conf.p1 = self.graphicsView_signal.plot(conf.original[0], conf.original[1], name="Original signal")
-        frq = np.linspace(0, conf.nyquist, int(np.floor(conf.num_samples / 2.0))) + conf.minfrq / 10.0
+        frq = np.linspace(0, conf.nyquist, int(np.floor(conf.num_samples / 2.0))) # + conf.minfrq / 10.0
         spectrum = abs(np.fft.fft(conf.original[1])[0:int(np.floor(conf.num_samples / 2.0))]) / len(conf.original[1]) * 2.0
-        conf.p2 = self.graphicsView_spectrum.plot(frq, spectrum, name="FFT spectrum of the original signal")
+        conf.p2 = self.graphicsView_spectrum.plot(frq[1::], spectrum[1::], name="FFT spectrum of the original signal")
 
     def plotFiltered(self):
         conf.p3 = self.graphicsView_signal.plot(conf.original[0], conf.filtered, name="Filtered signal", pen=[250, 0, 0, 100])
-        frq = np.linspace(0, conf.nyquist, int(np.floor(conf.num_samples / 2.0))) + conf.minfrq / 10.0
+        frq = np.linspace(0, conf.nyquist, int(np.floor(conf.num_samples / 2.0))) # + conf.minfrq / 10.0
         spectrum = abs(np.fft.fft(conf.filtered)[0:int(np.floor(conf.num_samples / 2.0))]) / len(conf.original[1]) * 2.0
-        conf.p4 = self.graphicsView_spectrum.plot(frq, spectrum, name="FFT spectrum of the filtered signal", pen=[250, 0, 0, 100])
+        conf.p4 = self.graphicsView_spectrum.plot(frq[1::], spectrum[1::], name="FFT spectrum of the filtered signal", pen=[250, 0, 0, 100])
 
     def clearPlot(self):
         self.graphicsView_signal.clear()
