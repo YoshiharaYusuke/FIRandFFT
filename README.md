@@ -11,13 +11,7 @@ Under construction
 
 ## Usage
 - windows
-  1. Install python2.7
-  2. Install these required libraries.
-  3. `python setup.py build` to make .exe file or  
-`python setup.py bdist_msi` to make .msi(installer)
-- ubuntu
-  1. Install these required libraries.
-  2. 
+  1. 
 
 ## Maintainer
 Yoshihara Yusuke  
