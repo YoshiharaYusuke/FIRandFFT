@@ -1,10 +1,13 @@
+# -*- coding: utf-8 -*-
+
 import os
 import sys
 
 from PySide import QtCore, QtGui
 import numpy as np
 from scipy import fromstring, int16
-import scipy.signal as scsi
+from scipy.signal import firwin
+from scipy.io import loadmat
 import wave as wv
 import pyqtgraph as pg
 
@@ -23,6 +26,7 @@ class Ui_MainWindow(object):
         icon.addPixmap(QtGui.QPixmap("icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         MainWindow.setWindowIcon(icon)
         MainWindow.setToolTip("")
+
         self.centralwidget = QtGui.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.horizontalLayout = QtGui.QHBoxLayout(self.centralwidget)
@@ -94,7 +98,7 @@ class Ui_MainWindow(object):
         self.dialog = QtGui.QFileDialog()
         self.dialog.setModal(True)
         self.dialog.setDirectory(os.path.expanduser('~'))
-        filters = ["csv comma-separated values(*.csv)", "text file(*.txt)", "tab tab-separated values(*.tsv)", "wav file(*.wav)", "All(*)"]  # File extention.
+        filters = ["csv comma-separated values(*.csv)", "text file(*.txt)", "tab tab-separated values(*.tsv)", "wav file(*.wav)", "mat file(*.mat)", "All(*)"]  # File extention.
         self.dialog.setNameFilters(filters)
         QtCore.QObject.connect(self.dialog, QtCore.SIGNAL("accepted()"), self.load)
         QtCore.QObject.connect(self.dialog, QtCore.SIGNAL("rejected()"), self.reject)
@@ -128,6 +132,14 @@ class Ui_MainWindow(object):
         self.graphicsView_spectrum.setLabel("bottom", text="Frequency f", units="Hz",  **labelStyle)
         self.graphicsView_spectrum.setLabel("left", text="Amplitude", **labelStyle)
 
+        MainWindow.installEventFilter(KeyPress(MainWindow))
+        MainWindow.setAcceptDrops(True)
+        """
+        self.graphicsView_signal.setAcceptDrops(True)
+        self.graphicsView_spectrum.setAcceptDrops(True)
+        self.graphicsView_signal.installEventFilter(KeyPress(MainWindow))
+        """
+
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QtGui.QApplication.translate("MainWindow", "FIRandFFT", None, QtGui.QApplication.UnicodeUTF8))
         self.comboBox_filter.setItemText(0, QtGui.QApplication.translate("MainWindow", "Low pass filter", None, QtGui.QApplication.UnicodeUTF8))
@@ -149,14 +161,24 @@ class Ui_MainWindow(object):
         conf.Window1.hide()
 
     def load(self):
-        if self.dialog.selectedFilter() == "csv comma-separated values(*.csv)":
-            conf.original = np.loadtxt(unicode(self.dialog.selectedFiles()[0]), delimiter=',').T
+        if conf.fileName[2] == True:
+            conf.fileName[0] = self.dialog.selectedFiles()[0]
+            conf.fileName[1] = self.dialog.selectedFilter()
+            conf.fileName[2] = False
+        else:
+            pass
+        """
+        print(unicode(conf.fileName[0]))
+        print(unicode(conf.fileName[1]))
+        """
+        if conf.fileName[1] == "csv comma-separated values(*.csv)":
+            conf.original = np.loadtxt(unicode(conf.fileName[0]), delimiter=',').T
 
-        elif self.dialog.selectedFilter() == "text file(*.txt)":
-            conf.original = np.loadtxt(unicode(self.dialog.selectedFiles()[0]), delimiter=',').T
+        elif conf.fileName[1] == "text file(*.txt)":
+            conf.original = np.loadtxt(unicode(conf.fileName[0]), delimiter=',').T
 
-        elif self.dialog.selectedFilter() == "wav file(*.wav)":
-            wr = wv.open(self.dialog.selectedFiles()[0], "rb")
+        elif conf.fileName[1] == "wav file(*.wav)":
+            wr = wv.open(conf.fileName[0], "rb")
             conf.Srate = wr.getframerate()
             conf.duration = float(wr.getnframes()) * 2.0 / float(wr.getframerate())
             data = wr.readframes(wr.getnframes())
@@ -164,11 +186,17 @@ class Ui_MainWindow(object):
             conf.original = np.linspace(0, conf.duration, wr.getnframes() * 2)
             conf.original = np.vstack((conf.original, np.r_[num_data[::2], num_data[1::2]]))
 
-        elif self.dialog.selectedFilter() == "tsv tab-separated values(*.tsv)":
-            conf.original = np.loadtxt(unicode(self.dialog.selectedFiles()[0]), delimiter='\t').T
-
+        elif conf.fileName[1] == "tsv tab-separated values(*.tsv)":
+            conf.original = np.loadtxt(unicode(conf.fileName[0]), delimiter='\t').T
+            
+        elif conf.fileName[1] == "mat file(*.mat)":
+            xy = loadmat(unicode(conf.fileName[0]),squeeze_me="true",mat_dtype="true",struct_as_record="false") #dictionary ['A', ('B') 'Length', 'Tinterval', 'Tstart']
+            duration = xy["Tinterval"] * (xy["Length"]-1)
+            time = np.linspace(xy["Tstart"], xy["Tstart"]+duration, xy["Length"])
+            conf.original = np.vstack((time, xy["A"]))
+            
         else:
-            conf.original = np.loadtxt(unicode(self.dialog.selectedFiles()[0]), delimiter=',').T
+            conf.original = np.loadtxt(unicode(conf.fileName[0]), delimiter=',').T
 
         self.start()
 
@@ -217,6 +245,7 @@ class Ui_MainWindow(object):
         self.start()
 
     def open(self):
+        conf.fileName[2]=True
         self.dialog.show()
 
     def tap(self):
@@ -259,13 +288,13 @@ class Ui_MainWindow(object):
 
     def filter(self):
         if self.comboBox_filter.currentIndex() == 0:  # LP
-            filtre = np.array(scsi.firwin(self.spinBox_tap.value(), self.doubleSpinBox_high.value(), nyq=conf.nyquist))
+            filtre = np.array(firwin(self.spinBox_tap.value(), self.doubleSpinBox_high.value(), nyq=conf.nyquist))
         elif self.comboBox_filter.currentIndex() == 1:  # HP
-            filtre = np.array(scsi.firwin(self.spinBox_tap.value(), self.doubleSpinBox_high.value(), pass_zero=False, nyq=conf.nyquist))
+            filtre = np.array(firwin(self.spinBox_tap.value(), self.doubleSpinBox_high.value(), pass_zero=False, nyq=conf.nyquist))
         elif self.comboBox_filter.currentIndex() == 2:  # BP
-            filtre = np.array(scsi.firwin(self.spinBox_tap.value(), [self.doubleSpinBox_low.value(), self.doubleSpinBox_high.value()], pass_zero=False, nyq=conf.nyquist))
+            filtre = np.array(firwin(self.spinBox_tap.value(), [self.doubleSpinBox_low.value(), self.doubleSpinBox_high.value()], pass_zero=False, nyq=conf.nyquist))
         elif self.comboBox_filter.currentIndex() == 3:  # BS
-            filtre = np.array(scsi.firwin(self.spinBox_tap.value(), [self.doubleSpinBox_low.value(), self.doubleSpinBox_high.value()], nyq=conf.nyquist))
+            filtre = np.array(firwin(self.spinBox_tap.value(), [self.doubleSpinBox_low.value(), self.doubleSpinBox_high.value()], nyq=conf.nyquist))
         else:
             pass
         conf.filtered = np.convolve(conf.original[1], filtre, mode='same')
@@ -317,13 +346,50 @@ class Ui_MainWindow(object):
         self.doubleSpinBox_high.setMinimum(Lower_Cutoff)
         self.doubleSpinBox_low.setMaximum(Higher_Cutoff)
 
+class KeyPress(QtCore.QObject): # add "QtCore."
+    def eventFilter(self, obj, event):
+        if event.type() == event.DragEnter:
+            event.accept()
+            global a,b,c,urllist
+            urllist = event.mimeData().urls()
+            a = str(urllist[0]).find("///") + 3 #[0] because only one file, + 3 because 'file///C:/filename.txt'
+            b = str(urllist[0]).rfind("\'")
+            c = str(urllist[0])[a:b].rfind(".")
+            return True
+            
+        elif event.type() == event.Drop:#event = QtCore.QEvent
+            event.accept()
+
+            conf.fileName[0] = str(urllist[0])[a:b]
+            conf.fileName[1] = str(urllist[0])[a:b][c::]
+            """
+            print("file name "+conf.fileName[0])
+            print("extention"+conf.fileName[1])
+            """
+            conf.Window1.ui.load()
+            conf.Window1.ui.start()
+            
+            return True
+            
+        elif event.type() == QtCore.QEvent.KeyPress: # add "QtCore."
+            #print "key press", event.key()
+            return True
+            
+        else:
+            return False#QtCore.QObject.eventFilter(self, obj, event)
+
+"""
+    def method1(Ui_MainWindow,self):
+        super(method1, self).load()
+        super(method1, self).start()
+"""
 
 class ControlMainWindow(QtGui.QMainWindow):
-    def __init__(self, parent=None):
-        super(ControlMainWindow, self).__init__(parent)
+    def __init__(self, p1=None):
+        super(ControlMainWindow, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-
+        #self.ui.graphicsView_signal.setAcceptDrops(True)
 
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
